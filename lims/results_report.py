@@ -855,6 +855,8 @@ class ResultsReportVersionDetail(Workflow, ModelSQL, ModelView):
         EntryDetailAnalysis = pool.get('lims.entry.detail.analysis')
 
         for detail in details:
+            if detail.type == 'preliminary':
+                continue
             linked_lines = []
             linked_entry_details = []
             cursor.execute('SELECT nl.id, nl.analysis_detail '
@@ -1324,6 +1326,9 @@ class ResultsReportVersionDetailSample(ModelSQL, ModelView):
         'get_notebook_field')
     sample_comments = fields.Function(fields.Text('Sample Comments'),
         'get_notebook_field')
+    lines_not_reported = fields.Function(fields.One2Many(
+        'lims.notebook.line', None, 'Not reported Lines'),
+        'get_lines_not_reported')
 
     @classmethod
     def __setup__(cls):
@@ -1346,6 +1351,18 @@ class ResultsReportVersionDetailSample(ModelSQL, ModelView):
                 for s in samples:
                     result[name][s.id] = getattr(s.notebook, name, None)
         return result
+
+    def get_lines_not_reported(self, name=None):
+        cursor = Transaction().connection.cursor()
+        pool = Pool()
+        NotebookLine = pool.get('lims.notebook.line')
+
+        cursor.execute('SELECT id '
+            'FROM "' + NotebookLine._table + '" '
+            'WHERE notebook = %s '
+            'AND (report = FALSE OR annulled = TRUE)',
+            (self.notebook.id,))
+        return [x[0] for x in cursor.fetchall()]
 
     @classmethod
     def _get_fields_from_sample(cls, sample, only_accepted=True):

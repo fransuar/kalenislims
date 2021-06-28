@@ -69,7 +69,7 @@ class Notebook(ModelSQL, ModelView):
     state = fields.Function(fields.Char('State'), 'get_state',
         searcher='search_state')
     lines_pending_reporting = fields.Function(fields.One2Many(
-        'lims.notebook.line', 'notebook', 'Lines'),
+        'lims.notebook.line', None, 'Lines'),
         'get_lines_pending_reporting')
     acceptance_pending = fields.Function(fields.Boolean('Pending acceptance'),
         'get_acceptance_pending', searcher='search_acceptance_pending')
@@ -5144,9 +5144,9 @@ class NotebookLineAnnulLines(NotebookAnnulLines):
         return 'end'
 
 
-class NotebookLineUnannulLines(Wizard):
+class NotebookUnannulLines(Wizard):
     'Revert Lines Annulment'
-    __name__ = 'lims.notebook_line.unannul_lines'
+    __name__ = 'lims.notebook.unannul_lines'
 
     start_state = 'ok'
     ok = StateTransition()
@@ -5154,12 +5154,13 @@ class NotebookLineUnannulLines(Wizard):
     def transition_ok(self):
         NotebookLine = Pool().get('lims.notebook.line')
 
-        notebook_lines = NotebookLine.search([
-            ('id', 'in', Transaction().context['active_ids']),
-            ('annulled', '=', True),
-            ])
-        if notebook_lines:
-            self.lines_unannul(notebook_lines)
+        for active_id in Transaction().context['active_ids']:
+            notebook_lines = NotebookLine.search([
+                ('notebook', '=', active_id),
+                ('annulled', '=', True),
+                ])
+            if notebook_lines:
+                self.lines_unannul(notebook_lines)
         return 'end'
 
     def lines_unannul(self, notebook_lines):
@@ -5175,6 +5176,22 @@ class NotebookLineUnannulLines(Wizard):
 
     def end(self):
         return 'reload'
+
+
+class NotebookLineUnannulLines(NotebookUnannulLines):
+    'Revert Lines Annulment'
+    __name__ = 'lims.notebook_line.unannul_lines'
+
+    def transition_ok(self):
+        NotebookLine = Pool().get('lims.notebook.line')
+
+        notebook_lines = NotebookLine.search([
+            ('id', 'in', Transaction().context['active_ids']),
+            ('annulled', '=', True),
+            ])
+        if notebook_lines:
+            self.lines_unannul(notebook_lines)
+        return 'end'
 
 
 class NotebookResultsVerificationStart(ModelView):
