@@ -2959,6 +2959,10 @@ msgctxt "field:lims.notebook.line,end_date:"
 msgid "End date"
 msgstr "Fecha de finalización"
 
+msgctxt "field:lims.notebook.line,exceptional_load:"
+msgid "Exceptionally loaded result"
+msgstr "Resultado cargado excepcionalmente"
+
 msgctxt "field:lims.notebook.line,final_concentration:"
 msgid "Final concentration"
 msgstr "Concentración final"
@@ -3450,6 +3454,30 @@ msgstr "Dominio para Análisis"
 msgctxt "field:lims.notebook.line.repeat_analysis.start,repetition_reason:"
 msgid "Reason"
 msgstr "Motivo"
+
+msgctxt "field:lims.notebook.load_results_exceptional.line,line:"
+msgid "Analysis"
+msgstr "Análisis"
+
+msgctxt "field:lims.notebook.load_results_exceptional.line,result:"
+msgid "Result"
+msgstr "Resultado"
+
+msgctxt "field:lims.notebook.load_results_exceptional.result,end_date:"
+msgid "End date"
+msgstr "Fecha de finalización"
+
+msgctxt "field:lims.notebook.load_results_exceptional.result,lines:"
+msgid "Lines"
+msgstr "Líneas"
+
+msgctxt "field:lims.notebook.load_results_exceptional.result,start_date:"
+msgid "Start date"
+msgstr "Fecha de inicio"
+
+msgctxt "field:lims.notebook.load_results_exceptional.start,notebook:"
+msgid "Notebook"
+msgstr "Cuaderno"
 
 msgctxt "field:lims.notebook.load_results_formula.action,chromatogram:"
 msgid "Chromatogram"
@@ -6199,6 +6227,18 @@ msgctxt "field:lims.typification.copy.error,message:"
 msgid "Message"
 msgstr "Mensaje"
 
+msgctxt "field:lims.typification.copy.result,existing_typifications:"
+msgid "Existing Typifications"
+msgstr "Tipificaciones existentes"
+
+msgctxt "field:lims.typification.copy.result,message:"
+msgid "Message"
+msgstr "Mensaje"
+
+msgctxt "field:lims.typification.copy.result,new_typifications:"
+msgid "New Typifications"
+msgstr "Tipificaciones nuevas"
+
 msgctxt "field:lims.typification.copy.start,action:"
 msgid "Action"
 msgstr "Acción"
@@ -6218,6 +6258,10 @@ msgstr "Método"
 msgctxt "field:lims.typification.copy.start,destination_product_type:"
 msgid "Product type"
 msgstr "Tipo de producto"
+
+msgctxt "field:lims.typification.copy.start,destination_product_types:"
+msgid "Product types"
+msgstr "Tipos de producto"
 
 msgctxt "field:lims.typification.copy.start,origin_analysis:"
 msgid "Analysis"
@@ -6491,6 +6535,10 @@ msgctxt "field:party.party,block_entry_confirmation:"
 msgid "Block Entry Confirmation"
 msgstr "Bloquear ingreso de muestras"
 
+msgctxt "field:party.party,carrier:"
+msgid "Carrier"
+msgstr "Transportista"
+
 msgctxt "field:party.party,email_report:"
 msgid "Email report"
 msgstr "Informe por e-mail"
@@ -6639,6 +6687,14 @@ msgid ""
 msgstr ""
 "Nombre interno del campo. Se permiten relaciones, como "
 "\"notebook.product_type.code\""
+
+msgctxt "help:lims.rule.condition,value:"
+msgid ""
+"For the \"In\" and \"Not in\" conditions, use a comma-separated list of "
+"values (e.g.: AB, CD, 12, 34)"
+msgstr ""
+"Para las condiciones \"En\" y \"No en\", utilice una lista de valores "
+"separados por comas (Ej.: AB, CD, 12, 34)"
 
 msgctxt "help:lims.trend.chart,active:"
 msgid "Check to include in future use"
@@ -7080,9 +7136,17 @@ msgctxt "model:ir.action,name:report_trend_chart"
 msgid "Trend Chart"
 msgstr "Gráfico de tendencia"
 
+msgctxt "model:ir.action,name:report_typification_copy_spreadsheet"
+msgid "Typifications Copied/Moved"
+msgstr "Tipificaciones copiadas/movidas"
+
 msgctxt "model:ir.action,name:wiz_add_sample_service"
 msgid "Add Sample Services"
 msgstr "Añadir servicios a muestras"
+
+msgctxt "model:ir.action,name:wiz_analysis_open_all_included_analysis"
+msgid "All Included Analysis"
+msgstr "Todos los análisis incluidos"
 
 msgctxt "model:ir.action,name:wiz_analysis_open_not_typified"
 msgid "Open Analysis Not Typified"
@@ -7302,6 +7366,10 @@ msgstr "14) Revertir Anulación de resultados a las líneas"
 msgctxt "model:ir.action,name:wiz_lims_notebook_line_uncertainty_calc"
 msgid "Uncertainty Calculation"
 msgstr "07) Cálculo de incertidumbre"
+
+msgctxt "model:ir.action,name:wiz_lims_notebook_load_results_exceptional"
+msgid "Exceptional Loading of Results"
+msgstr "Carga excepcional de resultados"
 
 msgctxt "model:ir.action,name:wiz_lims_notebook_load_results_formula"
 msgid "Load Results by Formula"
@@ -8248,6 +8316,10 @@ msgctxt "model:ir.message,text:msg_rule_condition_field"
 msgid "Invalid field: %(field)s"
 msgstr "Campo inválido: %(field)s"
 
+msgctxt "model:ir.message,text:msg_rule_condition_value"
+msgid "Invalid value: %(value)s"
+msgstr "Valor inválido: %(value)s"
+
 msgctxt "model:ir.message,text:msg_set_laboratories"
 msgid "A Set can be assigned to a single laboratory"
 msgstr "Un Set puede ser asignado a un único laboratorio"
@@ -8280,6 +8352,10 @@ msgctxt "model:ir.message,text:msg_typification_copy_analysis"
 msgid " * Analysis: %(analysis)s"
 msgstr " * Análisis: %(analysis)s"
 
+msgctxt "model:ir.message,text:msg_typification_copy_existing_typifications"
+msgid "%(qty)s Typifications already existed"
+msgstr "%(qty)s tipificaciones ya existían"
+
 msgctxt "model:ir.message,text:msg_typification_copy_from"
 msgid "FROM:"
 msgstr "DESDE:"
@@ -8296,9 +8372,17 @@ msgctxt "model:ir.message,text:msg_typification_copy_method"
 msgid " * Method: %(method)s"
 msgstr " * Método: %(method)s"
 
+msgctxt "model:ir.message,text:msg_typification_copy_new_typifications"
+msgid "%(qty)s Typifications were created"
+msgstr "Se crearon %(qty)s tipificaciones"
+
 msgctxt "model:ir.message,text:msg_typification_copy_product_type"
 msgid " * Product type: %(product_type)s"
 msgstr " * Tipo de producto: %(product_type)s"
+
+msgctxt "model:ir.message,text:msg_typification_copy_product_types"
+msgid " * Product types:"
+msgstr " * Tipos de producto:"
 
 msgctxt "model:ir.message,text:msg_typification_copy_to"
 msgid "TO:"
@@ -8623,6 +8707,10 @@ msgstr "Matrices"
 msgctxt "model:ir.ui.menu,name:lims_notebook_line_all_menu"
 msgid "All Notebook Lines"
 msgstr "Todas las Líneas de Cuaderno"
+
+msgctxt "model:ir.ui.menu,name:lims_notebook_load_results_exceptional_menu"
+msgid "Exceptional Loading of Results"
+msgstr "Carga excepcional de resultados"
 
 msgctxt "model:ir.ui.menu,name:lims_notebook_load_results_formula_menu"
 msgid "Load Results by Formula"
@@ -9348,6 +9436,18 @@ msgctxt "model:lims.notebook.line.repeat_analysis.start,name:"
 msgid "Repeat Analysis"
 msgstr "Repetir análisis"
 
+msgctxt "model:lims.notebook.load_results_exceptional.line,name:"
+msgid "Exceptional Loading of Results"
+msgstr "Carga excepcional de resultados"
+
+msgctxt "model:lims.notebook.load_results_exceptional.result,name:"
+msgid "Exceptional Loading of Results"
+msgstr "Carga excepcional de resultados"
+
+msgctxt "model:lims.notebook.load_results_exceptional.start,name:"
+msgid "Exceptional Loading of Results"
+msgstr "Carga excepcional de resultados"
+
 msgctxt "model:lims.notebook.load_results_formula.action,name:"
 msgid "Load Results by Formula"
 msgstr "Carga de resultados por fórmula"
@@ -9789,6 +9889,10 @@ msgctxt "model:lims.typification.copy.error,name:"
 msgid "Copy/Move Typification"
 msgstr "Copiar/Mover tipificación"
 
+msgctxt "model:lims.typification.copy.result,name:"
+msgid "Copy/Move Typification"
+msgstr "Copiar/Mover tipificación"
+
 msgctxt "model:lims.typification.copy.start,name:"
 msgid "Copy/Move Typification"
 msgstr "Copiar/Mover tipificación"
@@ -9904,6 +10008,10 @@ msgstr "Lims Ingreso Sólo lectura"
 msgctxt "model:res.group,name:group_lims_entry_update"
 msgid "Lims Entries Update"
 msgstr "Lims Ingreso Actualización"
+
+msgctxt "model:res.group,name:group_lims_laboratory_exceptional_results"
+msgid "Lims Results exceptional entry"
+msgstr "Lims Ingreso excepcional de resultados"
 
 msgctxt "model:res.group,name:group_lims_laboratory_reports"
 msgid "Lims Results reports"
@@ -11677,6 +11785,130 @@ msgctxt "report:lims.referral.report:"
 msgid "record.laboratory.name"
 msgstr ""
 
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "("
+msgstr "("
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid ")"
+msgstr ")"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid ","
+msgstr ","
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "-"
+msgstr "-"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "/"
+msgstr "/"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "/for"
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "/if"
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "00/00/0000"
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "00:00:00"
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "???"
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "Analysis"
+msgstr "Análisis"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "Date:"
+msgstr "Fecha:"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "Existing Typifications"
+msgstr "Tipificaciones existentes"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "Matrix"
+msgstr "Matriz"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "Method"
+msgstr "Método"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "New Typifications"
+msgstr "Tipificaciones nuevas"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "Page"
+msgstr "Página"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "Product type"
+msgstr "Tipo de producto"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "Typifications Copied/Moved"
+msgstr "Tipificaciones copiadas/movidas"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "User:"
+msgstr "Usuario:"
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "for each=\"line in existing_typifications\""
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "for each=\"line in new_typifications\""
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "format_date(datetime.date.today(), user.language)"
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "if test=\"existing_typifications\""
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "if test=\"new_typifications\""
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "line.analysis.rec_name"
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "line.matrix.rec_name"
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "line.method.rec_name"
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "line.product_type.rec_name"
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "user.rec_name"
+msgstr ""
+
+msgctxt "report:lims.report_typification_copy.spreadsheet:"
+msgid "€"
+msgstr ""
+
 msgctxt "report:lims.result_report.transcription:"
 msgid "("
 msgstr "("
@@ -12999,6 +13231,14 @@ msgstr ">"
 msgctxt "selection:lims.rule.condition,condition:"
 msgid ">="
 msgstr ">="
+
+msgctxt "selection:lims.rule.condition,condition:"
+msgid "In"
+msgstr "En"
+
+msgctxt "selection:lims.rule.condition,condition:"
+msgid "Not In"
+msgstr "No en"
 
 msgctxt "selection:lims.sample,state:"
 msgid "Annulled"
@@ -14798,6 +15038,22 @@ msgctxt "wizard_button:lims.notebook.line.repeat_analysis,start,repeat:"
 msgid "Repeat"
 msgstr "Repetir"
 
+msgctxt "wizard_button:lims.notebook.load_results_exceptional,result,confirm:"
+msgid "Confirm"
+msgstr "Confirmar"
+
+msgctxt "wizard_button:lims.notebook.load_results_exceptional,result,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:lims.notebook.load_results_exceptional,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:lims.notebook.load_results_exceptional,start,result:"
+msgid "Load results"
+msgstr "Cargar resultados"
+
 msgctxt "wizard_button:lims.notebook.load_results_formula,beginning,end:"
 msgid "Cancel"
 msgstr "Cancelar"
@@ -15355,6 +15611,14 @@ msgstr "Cancelar"
 msgctxt "wizard_button:lims.typification.copy,error,end:"
 msgid "Cancel"
 msgstr "Cancelar"
+
+msgctxt "wizard_button:lims.typification.copy,result,end:"
+msgid "Ok"
+msgstr "Aceptar"
+
+msgctxt "wizard_button:lims.typification.copy,result,save:"
+msgid "Save"
+msgstr "Guardar"
 
 msgctxt "wizard_button:lims.typification.copy,start,ask:"
 msgid "Continue"

@@ -3352,10 +3352,20 @@ class Sample(ModelSQL, ModelView):
                 'INNER JOIN "' + Fraction._table + '" f '
                 'ON f.id = s.fraction '
             'WHERE f.sample = %s '
-                'AND nl.annulled = FALSE',
+                'AND nl.annulled = TRUE',
             (self.id,))
-        if cursor.fetchone()[0] == 0:
-            return 'annulled'
+        annulled_lines = cursor.fetchone()[0]
+        if annulled_lines > 0:
+            cursor.execute('SELECT COUNT(*) '
+                'FROM "' + NotebookLine._table + '" nl '
+                    'INNER JOIN "' + Service._table + '" s '
+                    'ON s.id = nl.service '
+                    'INNER JOIN "' + Fraction._table + '" f '
+                    'ON f.id = s.fraction '
+                'WHERE f.sample = %s',
+                (self.id,))
+            if cursor.fetchone()[0] == annulled_lines:
+                return 'annulled'
         if self.laboratory_end_date:
             return 'lab_pending_acceptance'
         if self.laboratory_start_date:
@@ -6324,6 +6334,11 @@ class Referral(ModelSQL, ModelView):
     def search_rec_name(cls, name, clause):
         return [('laboratory',) + tuple(clause[1:])]
 
+    @fields.depends('laboratory')
+    def on_change_laboratory(self):
+        if self.laboratory and self.laboratory.carrier:
+            self.carrier = self.laboratory.carrier
+
     @classmethod
     @ModelView.button
     def send(cls, referrals):
@@ -6429,6 +6444,8 @@ class ReferService(Wizard):
 
         referrals = Referral.create([{
             'laboratory': self.start.laboratory.id,
+            'carrier': (self.start.laboratory.carrier and
+                self.start.laboratory.carrier.id or None),
             'date': self.start.date,
             'state': 'draft',
             }])

@@ -466,6 +466,19 @@
             <field name="name">analysis_laboratory_list</field>
         </record>
 
+<!-- Wizard Open All Included Analysis -->
+
+        <record model="ir.action.wizard" id="wiz_analysis_open_all_included_analysis">
+            <field name="name">All Included Analysis</field>
+            <field name="wiz_name">lims.analysis.open_all_included_analysis</field>
+        </record>
+
+        <record model="ir.action.keyword" id="wiz_analysis_open_all_included_analysis_keyword">
+            <field name="keyword">form_relate</field>
+            <field name="model">lims.analysis,-1</field>
+            <field name="action" ref="wiz_analysis_open_all_included_analysis"/>
+        </record>
+
 <!-- Typification actions related -->
 
         <record model="ir.action.act_window" id="act_lims_technical_scope_version_related1">
@@ -498,6 +511,11 @@
             <field name="type">form</field>
             <field name="name">typification_copy_error_form</field>
         </record>
+        <record model="ir.ui.view" id="lims_copy_typification_result_view_form">
+            <field name="model">lims.typification.copy.result</field>
+            <field name="type">form</field>
+            <field name="name">typification_copy_result_form</field>
+        </record>
 
         <record model="ir.action.wizard" id="wiz_lims_copy_typification">
             <field name="name">Copy/Move Typification</field>
@@ -514,6 +532,15 @@
             id="wiz_copy_typification-group_conf_base_tables_admin">
             <field name="action" ref="wiz_lims_copy_typification"/>
             <field name="group" ref="group_lims_conf_base_tables_admin"/>
+        </record>
+
+<!-- Typifications Copied/Moved -->
+
+        <record model="ir.action.report" id="report_typification_copy_spreadsheet">
+            <field name="name">Typifications Copied/Moved</field>
+            <field name="report_name">lims.report_typification_copy.spreadsheet</field>
+            <field name="report">lims/report/typification_copy_spreadsheet.fods</field>
+            <field name="extension">xls</field>
         </record>
 
 <!-- Wizard Copy Calculated Typification -->
