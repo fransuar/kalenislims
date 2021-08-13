@@ -334,7 +334,6 @@ class Planification(Workflow, ModelSQL, ModelView):
     def do_confirm(cls, planifications):
         for planification in planifications:
             planification.update_laboratory_notebook()
-            planification.update_analysis_detail()
             if planification.waiting_process:
                 planification.waiting_process = False
                 planification.save()
@@ -354,58 +353,102 @@ class Planification(Workflow, ModelSQL, ModelView):
             'WHERE pd.planification = %s '
                 'AND sd.notebook_line IS NOT NULL',
             (self.id,))
-        notebook_lines = NotebookLine.browse(x[0] for x in cursor.fetchall())
+        notebook_lines = NotebookLine.browse(x[0]
+            for x in cursor.fetchall())
         if notebook_lines:
-            NotebookLine.write(notebook_lines, {'start_date': self.start_date})
+            NotebookLine.write(notebook_lines, {
+                'start_date': self.start_date,
+                'planification': self.id,
+                })
 
     def update_laboratory_notebook(self):
+        cursor = Transaction().connection.cursor()
         pool = Pool()
+        PlanificationDetail = pool.get('lims.planification.detail')
+        PlanificationServiceDetail = pool.get(
+            'lims.planification.service_detail')
+        ServiceDetailProfessional = pool.get(
+            'lims.planification.service_detail-laboratory.professional')
+        NotebookLineProfessional = pool.get(
+            'lims.notebook.line-laboratory.professional')
+        NotebookLineControl = pool.get('lims.notebook.line-fraction')
+
+        # Professionals
+        cursor.execute('SELECT sd.notebook_line, sdp.professional '
+            'FROM "' + ServiceDetailProfessional._table + '" sdp '
+                'INNER JOIN "' + PlanificationServiceDetail._table + '" sd '
+                'ON sd.id = sdp.detail '
+                'INNER JOIN "' + PlanificationDetail._table + '" pd '
+                'ON pd.id = sd.detail '
+            'WHERE pd.planification = %s '
+                'AND sd.notebook_line IS NOT NULL',
+            (self.id,))
+        res = cursor.fetchall()
+        if res:
+            notebook_lines_ids = ', '.join(str(nl_id)
+                for nl_id, sd_id in res)
+            cursor.execute('DELETE FROM "' +
+                NotebookLineProfessional._table + '" '
+                'WHERE notebook_line IN (' + notebook_lines_ids + ')')
+
+            to_create = []
+            for notebook_line, professional in res:
+                to_create.append({
+                    'notebook_line': notebook_line,
+                    'professional': professional,
+                    })
+            NotebookLineProfessional.create(to_create)
+
+        # Controls
+        controls = [f.id for f in self.controls]
+        if controls:
+            cursor.execute('SELECT sd.notebook_line '
+                'FROM "' + PlanificationServiceDetail._table + '" sd '
+                    'INNER JOIN "' + PlanificationDetail._table + '" pd '
+                    'ON pd.id = sd.detail '
+                'WHERE pd.planification = %s '
+                    'AND sd.notebook_line IS NOT NULL '
+                    'AND sd.is_control = FALSE',
+                (self.id,))
+            res = [x[0] for x in cursor.fetchall()]
+            if res:
+                notebook_lines_ids = ', '.join(str(nl_id)
+                    for nl_id in res)
+                cursor.execute('DELETE FROM "' +
+                    NotebookLineControl._table + '" '
+                    'WHERE notebook_line IN (' + notebook_lines_ids + ')')
+
+                to_create = []
+                for notebook_line in res:
+                    for fraction in controls:
+                        to_create.append({
+                            'notebook_line': notebook_line,
+                            'fraction': fraction,
+                            })
+                NotebookLineControl.create(to_create)
+
+    def update_analysis_detail(self):
+        cursor = Transaction().connection.cursor()
+        pool = Pool()
+        PlanificationDetail = pool.get('lims.planification.detail')
         PlanificationServiceDetail = pool.get(
             'lims.planification.service_detail')
         NotebookLine = pool.get('lims.notebook.line')
-
-        controls = [f.id for f in self.controls]
-
-        notebook_lines = []
-        service_details = PlanificationServiceDetail.search([
-            ('detail.planification', '=', self.id),
-            ('notebook_line', '!=', None),
-            ])
-        for service_detail in service_details:
-            notebook_line = NotebookLine(
-                service_detail.notebook_line.id)
-            notebook_line.start_date = self.start_date
-            notebook_line.laboratory_professionals = [p.id
-                for p in service_detail.staff_responsible]
-            notebook_line.planification = self.id
-            if not service_detail.is_control:
-                notebook_line.controls = controls
-            notebook_lines.append(notebook_line)
-        if notebook_lines:
-            NotebookLine.save(notebook_lines)
-
-    def update_analysis_detail(self):
-        pool = Pool()
-        PlanificationServiceDetail = pool.get(
-            'lims.planification.service_detail')
         EntryDetailAnalysis = pool.get('lims.entry.detail.analysis')
 
-        analysis_detail_ids = []
-        service_details = PlanificationServiceDetail.search([
-            ('detail.planification', '=', self.id),
-            ('notebook_line.analysis_detail', '!=', None),
-            ])
-        for service_detail in service_details:
-            analysis_detail_ids.append(
-                service_detail.notebook_line.analysis_detail.id)
-
-        analysis_details = EntryDetailAnalysis.search([
-            ('id', 'in', analysis_detail_ids),
-            ])
+        cursor.execute('SELECT nl.analysis_detail '
+            'FROM "' + NotebookLine._table + '" nl '
+                'INNER JOIN "' + PlanificationServiceDetail._table + '" sd '
+                'ON nl.id = sd.notebook_line '
+                'INNER JOIN "' + PlanificationDetail._table + '" pd '
+                'ON pd.id = sd.detail '
+            'WHERE pd.planification = %s '
+                'AND nl.analysis_detail IS NOT NULL',
+            (self.id,))
+        analysis_details = EntryDetailAnalysis.browse(x[0]
+            for x in cursor.fetchall())
         if analysis_details:
-            EntryDetailAnalysis.write(analysis_details, {
-                'state': 'planned',
-                })
+            EntryDetailAnalysis.write(analysis_details, {'state': 'planned'})
 
     @classmethod
     @ModelView.button
@@ -3734,10 +3777,14 @@ class SearchFractionsDetail(ModelSQL, ModelView):
         'get_service_field')
     report_date = fields.Function(fields.Date('Date agreed for result'),
         'get_service_field')
+    results_estimated_date = fields.Function(fields.Date(
+        'Estimated date of result'), 'get_results_estimated_date')
     completion_percentage = fields.Function(fields.Numeric('Complete',
         digits=(1, 4)), 'get_completion_percentage')
     department = fields.Function(fields.Many2One('company.department',
         'Department'), 'get_department', searcher='search_department')
+    sample_state = fields.Function(fields.Selection(
+        'get_sample_states', 'State'), 'get_sample_state')
     session_id = fields.Integer('Session ID')
 
     @classmethod
@@ -3751,6 +3798,19 @@ class SearchFractionsDetail(ModelSQL, ModelView):
         super().__setup__()
         cls._order.insert(0, ('fraction', 'ASC'))
         cls._order.insert(1, ('service_analysis', 'ASC'))
+
+    @classmethod
+    def get_sample_states(cls):
+        pool = Pool()
+        Sample = pool.get('lims.sample')
+        return Sample.fields_get(['state'])['state']['selection']
+
+    @classmethod
+    def get_sample_state(cls, details, name):
+        result = {}
+        for d in details:
+            result[d.id] = getattr(d.fraction.sample, 'state', None)
+        return result
 
     @classmethod
     def get_fraction_field(cls, details, names):
@@ -3769,6 +3829,24 @@ class SearchFractionsDetail(ModelSQL, ModelView):
     @classmethod
     def search_fraction_field(cls, name, clause):
         return [('fraction.' + name,) + tuple(clause[1:])]
+
+    def _order_fraction_field(name):
+        def order_field(tables):
+            Fraction = Pool().get('lims.fraction')
+            field = Fraction._fields[name]
+            table, _ = tables[None]
+            fraction_tables = tables.get('fraction')
+            if fraction_tables is None:
+                fraction = Fraction.__table__()
+                fraction_tables = {
+                    None: (fraction, fraction.id == table.fraction),
+                    }
+                tables['fraction'] = fraction_tables
+            return field.convert_order(name, fraction_tables, Fraction)
+        return staticmethod(order_field)
+    # Redefine convert_order function with 'order_%s' % field
+    order_product_type = _order_fraction_field('product_type')
+    order_matrix = _order_fraction_field('matrix')
 
     @classmethod
     def get_service_field(cls, details, names):
@@ -3805,6 +3883,42 @@ class SearchFractionsDetail(ModelSQL, ModelView):
         if (op, operand) in (('=', True), ('!=', False)):
             return [('id', 'in', urgent_services)]
         return [('id', 'not in', urgent_services)]
+
+    @classmethod
+    def get_results_estimated_date(cls, details, name):
+        cursor = Transaction().connection.cursor()
+        pool = Pool()
+        NotebookLine = pool.get('lims.notebook.line')
+        EntryDetailAnalysis = pool.get('lims.entry.detail.analysis')
+        Service = pool.get('lims.service')
+        Notebook = pool.get('lims.notebook')
+
+        result = {}
+        for d in details:
+            cursor.execute('SELECT ad.confirmation_date, '
+                    'nl.results_estimated_waiting '
+                'FROM "' + NotebookLine._table + '" nl '
+                    'INNER JOIN "' + EntryDetailAnalysis._table + '" ad '
+                    'ON ad.id = nl.analysis_detail '
+                    'INNER JOIN "' + Service._table + '" srv '
+                    'ON srv.id = nl.service '
+                    'INNER JOIN "' + Notebook._table + '" n '
+                    'ON n.id = nl.notebook '
+                'WHERE n.fraction = %s '
+                    'AND srv.analysis = %s '
+                    'AND ad.confirmation_date IS NOT NULL '
+                    'AND nl.results_estimated_waiting IS NOT NULL',
+                (str(d.fraction.id), str(d.service_analysis.id)))
+            date = None
+            for x in cursor.fetchall():
+                line_date = NotebookLine._get_results_estimated_date(
+                    x[0], x[1])
+                if not line_date:
+                    continue
+                if not date or date > line_date:
+                    date = line_date
+            result[d.id] = date
+        return result
 
     @classmethod
     def get_completion_percentage(cls, details, name):
@@ -5322,6 +5436,7 @@ class TechniciansQualification(Wizard):
         planification.state = 'confirmed'
         planification.save()
         planification.pre_update_laboratory_notebook()
+        planification.update_analysis_detail()
         Planification.__queue__.do_confirm([planification])
         return 'end'
 
@@ -6185,21 +6300,7 @@ class PendingServicesUnplannedReport(Report):
         else:
             labs = [l.id for l in Laboratory.search([])]
 
-        clause = [
-            ('plannable', '=', True),
-            ('state', '=', 'unplanned'),
-            ('analysis.behavior', '!=', 'internal_relation'),
-            ('service.fraction.confirmed', '=', True),
-            ]
-        if data['start_date']:
-            clause.append(
-                ('service.confirmation_date', '>=', data['start_date']))
-        if data['end_date']:
-            clause.append(
-                ('service.confirmation_date', '<=', data['end_date']))
-        if data['party']:
-            clause.append(('party', '=', data['party']))
-
+        clause = cls._get_details_clause(data)
         objects = {}
         with Transaction().set_user(0):
             details = EntryDetailAnalysis.search(clause)
@@ -6309,6 +6410,24 @@ class PendingServicesUnplannedReport(Report):
         return report_context
 
     @classmethod
+    def _get_details_clause(cls, data):
+        clause = [
+            ('plannable', '=', True),
+            ('state', '=', 'unplanned'),
+            ('analysis.behavior', '!=', 'internal_relation'),
+            ('service.fraction.confirmed', '=', True),
+            ]
+        if data['start_date']:
+            clause.append(
+                ('service.confirmation_date', '>=', data['start_date']))
+        if data['end_date']:
+            clause.append(
+                ('service.confirmation_date', '<=', data['end_date']))
+        if data['party']:
+            clause.append(('party', '=', data['party']))
+        return clause
+
+    @classmethod
     def _get_estimated_waiting(cls, detail_id):
         cursor = Transaction().connection.cursor()
         NotebookLine = Pool().get('lims.notebook.line')
@@ -6346,21 +6465,7 @@ class PendingServicesUnplannedSpreadsheet(Report):
         else:
             labs = [l.id for l in Laboratory.search([])]
 
-        clause = [
-            ('plannable', '=', True),
-            ('state', '=', 'unplanned'),
-            ('analysis.behavior', '!=', 'internal_relation'),
-            ('service.fraction.confirmed', '=', True),
-            ]
-        if data['start_date']:
-            clause.append(
-                ('service.confirmation_date', '>=', data['start_date']))
-        if data['end_date']:
-            clause.append(
-                ('service.confirmation_date', '<=', data['end_date']))
-        if data['party']:
-            clause.append(('party', '=', data['party']))
-
+        clause = cls._get_details_clause(data)
         objects = {}
         with Transaction().set_user(0):
             details = EntryDetailAnalysis.search(clause)
@@ -6451,6 +6556,24 @@ class PendingServicesUnplannedSpreadsheet(Report):
 
         report_context['objects'] = objects
         return report_context
+
+    @classmethod
+    def _get_details_clause(cls, data):
+        clause = [
+            ('plannable', '=', True),
+            ('state', '=', 'unplanned'),
+            ('analysis.behavior', '!=', 'internal_relation'),
+            ('service.fraction.confirmed', '=', True),
+            ]
+        if data['start_date']:
+            clause.append(
+                ('service.confirmation_date', '>=', data['start_date']))
+        if data['end_date']:
+            clause.append(
+                ('service.confirmation_date', '<=', data['end_date']))
+        if data['party']:
+            clause.append(('party', '=', data['party']))
+        return clause
 
     @classmethod
     def _get_estimated_waiting(cls, detail_id):

@@ -430,8 +430,8 @@ class Notebook(ModelSQL, ModelView):
 
         notebooks_ids = '\', \''.join(str(n) for n in notebooks_ids + [0])
 
-        cursor.execute('SELECT nl.notebook, nl.analysis, nl.accepted, '
-                'd.report_grouper '
+        cursor.execute('SELECT nl.notebook, nl.analysis, nl.method, '
+                'd.report_grouper, nl.accepted '
             'FROM "' + NotebookLine._table + '" nl '
                 'INNER JOIN "' + EntryDetailAnalysis._table + '" d '
                 'ON d.id = nl.analysis_detail '
@@ -453,13 +453,12 @@ class Notebook(ModelSQL, ModelView):
             (laboratory_id,))
         notebook_lines = cursor.fetchall()
 
-        # Check accepted repetitions
-        to_check = []
-        oks = []
+        # Check repetitions
+        oks, to_check = [], []
         accepted_notebooks = []
         for line in notebook_lines:
-            key = (line[0], line[1], line[3])
-            if not line[2]:
+            key = (line[0], line[1], line[2], line[3])
+            if not line[4]:
                 to_check.append(key)
             else:
                 oks.append(key)
@@ -469,7 +468,7 @@ class Notebook(ModelSQL, ModelView):
         accepted_notebooks = list(set(accepted_notebooks))
 
         excluded_notebooks = set()
-        for n_id, a_id, grouper in to_check:
+        for n_id, a_id, m_id, grouper in to_check:
             if n_id not in accepted_notebooks:
                 continue
             key = (n_id, grouper)
@@ -787,7 +786,7 @@ class NotebookLine(ModelSQL, ModelView):
     notebook = fields.Many2One('lims.notebook', 'Laboratory notebook',
         ondelete='CASCADE', select=True, required=True)
     analysis_detail = fields.Many2One('lims.entry.detail.analysis',
-        'Analysis detail', select=True)
+        'Analysis detail', ondelete='CASCADE', select=True)
     service = fields.Many2One('lims.service', 'Service', readonly=True,
         ondelete='CASCADE', select=True)
     analysis = fields.Many2One('lims.analysis', 'Analysis', required=True,
@@ -975,6 +974,8 @@ class NotebookLine(ModelSQL, ModelView):
         depends=['repetition'])
     exceptional_load = fields.Boolean('Exceptionally loaded result',
         readonly=True)
+    exceptional_load_uid = fields.Many2One('res.user',
+        'Exceptional loading of results User', readonly=True)
 
     del _states, _depends
 
@@ -1758,6 +1759,10 @@ class NotebookLineAllFields(ModelSQL, ModelView):
     repetition_reason = fields.Char('Repetition reason', readonly=True,
         states={'invisible': Eval('repetition', 0) == 0},
         depends=['repetition'])
+    exceptional_load = fields.Boolean('Exceptionally loaded result',
+        readonly=True)
+    exceptional_load_uid = fields.Many2One('res.user',
+        'Exceptional loading of results User', readonly=True)
 
     @classmethod
     def __setup__(cls):
@@ -1856,6 +1861,8 @@ class NotebookLineAllFields(ModelSQL, ModelView):
             service.report_date,
             line.department,
             line.repetition_reason,
+            line.exceptional_load,
+            line.exceptional_load_uid,
             ]
         where = Literal(True)
         return join6.select(*columns, where=where)
@@ -2563,7 +2570,8 @@ class NotebookInternalRelationsCalc1(Wizard):
         relations = NotebookInternalRelationsCalc1Relation.search([
             ('session_id', '=', self._session_id),
             ])
-        notebook_lines_to_save = []
+        lines_to_save = []
+        lines_to_validate_limits = []
         for relation in relations:
             notebook_lines = NotebookLine.search([
                 ('notebook', '=', relation.notebook.id),
@@ -2589,9 +2597,22 @@ class NotebookInternalRelationsCalc1(Wizard):
                 if notebook_line.laboratory.automatic_accept_result:
                     notebook_line.accepted = True
                     notebook_line.acceptance_date = datetime.now()
-                notebook_lines_to_save.append(notebook_line)
-        NotebookLine.save(notebook_lines_to_save)
+                lines_to_save.append(notebook_line)
+                if notebook_line.analysis.validate_limits_after_calculation:
+                    lines_to_validate_limits.append(notebook_line)
+        NotebookLine.save(lines_to_save)
+
+        if lines_to_validate_limits:
+            self.validate_limits(lines_to_validate_limits)
         return 'end'
+
+    def validate_limits(self, notebook_lines):
+        pool = Pool()
+        LimitsValidation = pool.get('lims.notebook.limits_validation',
+            type='wizard')
+        session_id, _, _ = LimitsValidation.create()
+        limits_validation = LimitsValidation(session_id)
+        limits_validation.lines_limits_validation(notebook_lines)
 
     def _get_analysis_result(self, analysis_code, notebook, relation_code,
             converted=False):
@@ -4480,6 +4501,7 @@ class NotebookLoadResultsExceptional(Wizard):
             notebook_line.start_date = start_date
             notebook_line.end_date = end_date
             notebook_line.exceptional_load = True
+            notebook_line.exceptional_load_uid = int(Transaction().user)
             lines_to_save.append(notebook_line)
         NotebookLine.save(lines_to_save)
         return 'end'
@@ -6039,7 +6061,8 @@ class AnalysisPendingInform(Report):
         if party:
             party_clause = 'AND e.party = ' + str(party)
 
-        cursor.execute('SELECT nl.notebook, nl.analysis, nl.accepted '
+        cursor.execute('SELECT nl.notebook, nl.analysis, nl.method, '
+                'nl.accepted '
             'FROM "' + NotebookLine._table + '" nl '
                 'INNER JOIN "' + Notebook._table + '" n '
                 'ON n.id = nl.notebook '
@@ -6061,12 +6084,11 @@ class AnalysisPendingInform(Report):
             (date_from, date_to, laboratory,))
         notebook_lines = cursor.fetchall()
 
-        # Check accepted repetitions
-        to_check = []
-        oks = []
+        # Check repetitions
+        oks, to_check = [], []
         for line in notebook_lines:
-            key = (line[0], line[1])
-            if not line[2]:
+            key = (line[0], line[1], line[2])
+            if not line[3]:
                 to_check.append(key)
             else:
                 oks.append(key)
@@ -6074,7 +6096,7 @@ class AnalysisPendingInform(Report):
         to_check = list(set(to_check) - set(oks))
 
         excluded_notebooks = {}
-        for n_id, a_id in to_check:
+        for n_id, a_id, m_id in to_check:
             if n_id not in excluded_notebooks:
                 excluded_notebooks[n_id] = []
             excluded_notebooks[n_id].append(a_id)

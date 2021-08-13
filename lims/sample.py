@@ -250,6 +250,19 @@ class FractionType(ModelSQL, ModelView):
             return [(field,) + tuple(clause[1:])]
         return [(cls._rec_name,) + tuple(clause[1:])]
 
+    @classmethod
+    def copy(cls, records, default=None):
+        if default is None:
+            default = {}
+        current_default = default.copy()
+
+        new_records = []
+        for record in records:
+            current_default['code'] = '%s (copy)' % record.code
+            new_record, = super().copy([record], default=current_default)
+            new_records.append(new_record)
+        return new_records
+
 
 class SampleProducer(ModelSQL, ModelView):
     'Sample Producer'
@@ -617,16 +630,15 @@ class Service(ModelSQL, ModelView):
                     service.analysis, service.analysis.code,
                     service_context))
 
-            if analysis_data:
-                for analysis in analysis_data:
-                    values = {}
-                    values['service'] = service.id
-                    values['analysis'] = analysis['id']
-                    values['analysis_origin'] = analysis['origin']
-                    values['laboratory'] = analysis['laboratory']
-                    values['method'] = analysis['method']
-                    values['device'] = analysis['device']
-                    to_create.append(values)
+            for analysis in analysis_data:
+                values = {}
+                values['service'] = service.id
+                values['analysis'] = analysis['id']
+                values['analysis_origin'] = analysis['origin']
+                values['laboratory'] = analysis['laboratory']
+                values['method'] = analysis['method']
+                values['device'] = analysis['device']
+                to_create.append(values)
 
             if to_create:
                 with Transaction().set_user(0, set_context=True):
@@ -1685,25 +1697,25 @@ class Fraction(ModelSQL, ModelView):
             for type_ in types:
                 if type_ == 'mcl':
                     res_type.append(config.mcl_fraction_type)
-                if type_ == 'con':
+                elif type_ == 'con':
                     res_type.append(config.con_fraction_type)
-                if type_ == 'bmz':
+                elif type_ == 'bmz':
                     res_type.append(config.bmz_fraction_type)
-                if type_ == 'rm':
+                elif type_ == 'rm':
                     res_type.append(config.rm_fraction_type)
-                if type_ == 'bre':
+                elif type_ == 'bre':
                     res_type.append(config.bre_fraction_type)
-                if type_ == 'mrt':
+                elif type_ == 'mrt':
                     res_type.append(config.mrt_fraction_type)
-                if type_ == 'coi':
+                elif type_ == 'coi':
                     res_type.append(config.coi_fraction_type)
-                if type_ == 'mrc':
+                elif type_ == 'mrc':
                     res_type.append(config.mrc_fraction_type)
-                if type_ == 'sla':
+                elif type_ == 'sla':
                     res_type.append(config.sla_fraction_type)
-                if type_ == 'itc':
+                elif type_ == 'itc':
                     res_type.append(config.itc_fraction_type)
-                if type_ == 'itl':
+                elif type_ == 'itl':
                     res_type.append(config.itl_fraction_type)
             if clause[1] in ('=', '!='):
                 return [('type', clause[1], res_type[0])]
@@ -3045,8 +3057,9 @@ class Sample(ModelSQL, ModelView):
         samples_in_progress = Config(1).samples_in_progress
         digits = Sample.completion_percentage.digits[1]
 
-        cursor.execute('SELECT nl.notebook, nl.analysis, nl.accepted, '
-                'nl.result, nl.literal_result, nl.result_modifier '
+        cursor.execute('SELECT nl.notebook, nl.analysis, nl.method, '
+                'nl.accepted, nl.result, nl.literal_result, '
+                'nl.result_modifier '
             'FROM "' + NotebookLine._table + '" nl '
                 'INNER JOIN "' + EntryDetailAnalysis._table + '" d '
                 'ON d.id = nl.analysis_detail '
@@ -3066,22 +3079,23 @@ class Sample(ModelSQL, ModelView):
         if not total:
             return _ZERO
 
+        # Check repetitions
         oks, to_check = [], []
 
         if samples_in_progress == 'accepted':
             for line in notebook_lines:
-                key = (line[0], line[1])
-                if line[2]:
+                key = (line[0], line[1], line[2])
+                if line[3]:
                     oks.append(key)
                 else:
                     to_check.append(key)
 
         elif samples_in_progress == 'result':
             for line in notebook_lines:
-                key = (line[0], line[1])
-                if (line[3] not in [None, ''] or
-                        line[4] not in [None, ''] or
-                        line[5] in ['d', 'nd', 'pos',
+                key = (line[0], line[1], line[2])
+                if (line[4] not in [None, ''] or
+                        line[5] not in [None, ''] or
+                        line[6] in ['d', 'nd', 'pos',
                         'neg', 'ni', 'abs', 'pre', 'na']):
                     oks.append(key)
                 else:
@@ -3580,7 +3594,6 @@ class ManageServices(Wizard):
         pool = Pool()
         Entry = pool.get('lims.entry')
         Fraction = pool.get('lims.fraction')
-        Cron = pool.get('ir.cron')
 
         delete_ack_report_cache = False
         fraction = Fraction(Transaction().context['active_id'])
@@ -3636,11 +3649,9 @@ class ManageServices(Wizard):
                         for detail in actual_service.analysis_detail:
                             detail.save()
 
-        if Cron.search([
-                ('method', '=', 'lims.entry|cron_acknowledgment_of_receipt'),
-                ('active', '=', True),
-                ]):
+        if self._send_ack_of_receipt():
             return 'send_ack_of_receipt'
+
         return 'end'
 
     def create_service(self, service, fraction):
@@ -3771,6 +3782,15 @@ class ManageServices(Wizard):
             'priority', 'estimated_waiting_laboratory',
             'estimated_waiting_report', 'report_date', 'comments', 'divide')
 
+    def _send_ack_of_receipt(self):
+        Cron = Pool().get('ir.cron')
+        if Cron.search([
+                ('method', '=', 'lims.entry|cron_acknowledgment_of_receipt'),
+                ('active', '=', True),
+                ]):
+            return True
+        return False
+
     def transition_send_ack(self):
         pool = Pool()
         Fraction = pool.get('lims.fraction')
@@ -3797,8 +3817,7 @@ class CompleteServices(Wizard):
         Fraction = Pool().get('lims.fraction')
         fraction = Fraction(Transaction().context['active_id'])
         for service in fraction.services:
-            if service.analysis.behavior != 'additional':
-                self.complete_analysis_detail(service)
+            self.complete_analysis_detail(service)
         return 'end'
 
     def complete_analysis_detail(self, service):
@@ -3806,6 +3825,18 @@ class CompleteServices(Wizard):
         pool = Pool()
         Service = pool.get('lims.service')
         EntryDetailAnalysis = pool.get('lims.entry.detail.analysis')
+
+        if service.annulled:
+            return
+        to_delete = EntryDetailAnalysis.search([
+            ('service', '=', service.id),
+            ('state', 'in', ('draft', 'unplanned')),
+            ])
+        if to_delete:
+            with Transaction().set_user(0, set_context=True):
+                EntryDetailAnalysis.delete(to_delete)
+        if service.analysis.behavior == 'additional':
+            return
 
         analysis_data = []
         if service.analysis.type == 'analysis':
@@ -3833,8 +3864,9 @@ class CompleteServices(Wizard):
         to_create = []
         for analysis in analysis_data:
             if EntryDetailAnalysis.search_count([
-                    ('service', '=', service.id),
+                    ('fraction', '=', service.fraction.id),
                     ('analysis', '=', analysis['id']),
+                    ('method', '=', analysis['method']),
                     ]) != 0:
                 continue
             values = {}
@@ -3956,7 +3988,6 @@ class AddSampleService(Wizard):
         pool = Pool()
         Sample = pool.get('lims.sample')
         Entry = pool.get('lims.entry')
-        Cron = pool.get('ir.cron')
 
         for sample in Sample.browse(Transaction().context['active_ids']):
             delete_ack_report_cache = False
@@ -3981,11 +4012,9 @@ class AddSampleService(Wizard):
                 entry.ack_report_cache = None
                 entry.save()
 
-        if Cron.search([
-                ('method', '=', 'lims.entry|cron_acknowledgment_of_receipt'),
-                ('active', '=', True),
-                ]):
+        if self._send_ack_of_receipt():
             return 'send_ack_of_receipt'
+
         return 'end'
 
     def create_service(self, service, fraction):
@@ -4026,6 +4055,15 @@ class AddSampleService(Wizard):
                 })
 
         return new_service
+
+    def _send_ack_of_receipt(self):
+        Cron = Pool().get('ir.cron')
+        if Cron.search([
+                ('method', '=', 'lims.entry|cron_acknowledgment_of_receipt'),
+                ('active', '=', True),
+                ]):
+            return True
+        return False
 
     def transition_send_ack(self):
         pool = Pool()
@@ -4125,7 +4163,6 @@ class EditSampleService(Wizard):
         pool = Pool()
         Sample = pool.get('lims.sample')
         Entry = pool.get('lims.entry')
-        Cron = pool.get('ir.cron')
 
         actual_analysis = [(s.analysis.id, s.method and s.method.id or None)
             for s in self.start.services]
@@ -4157,11 +4194,9 @@ class EditSampleService(Wizard):
                 entry.ack_report_cache = None
                 entry.save()
 
-        if Cron.search([
-                ('method', '=', 'lims.entry|cron_acknowledgment_of_receipt'),
-                ('active', '=', True),
-                ]):
+        if self._send_ack_of_receipt():
             return 'send_ack_of_receipt'
+
         return 'end'
 
     def annul_service(self, service):
@@ -4288,6 +4323,15 @@ class EditSampleService(Wizard):
 
         original.state = 'annulled'
         original.save()
+
+    def _send_ack_of_receipt(self):
+        Cron = Pool().get('ir.cron')
+        if Cron.search([
+                ('method', '=', 'lims.entry|cron_acknowledgment_of_receipt'),
+                ('active', '=', True),
+                ]):
+            return True
+        return False
 
     def transition_send_ack(self):
         pool = Pool()
@@ -4460,21 +4504,16 @@ class CountersampleStorage(Wizard):
                     if not notebook_lines:
                         continue
 
-                    # Check not accepted (with repetitions)
-                    to_check = []
-                    oks = []
+                    # Check repetitions
+                    oks, to_check = [], []
                     for line in notebook_lines:
-                        key = line.analysis.id
+                        key = (line.analysis.id, line.method.id)
                         if not line.accepted:
                             to_check.append(key)
                         else:
                             oks.append(key)
-                    to_check = list(set(to_check))
-                    oks = list(set(oks))
-                    if to_check:
-                        for key in oks:
-                            if key in to_check:
-                                to_check.remove(key)
+
+                    to_check = list(set(to_check) - set(oks))
                     if len(to_check) > 0:
                         continue
 
@@ -6099,21 +6138,16 @@ class CountersampleStorageReport(Report):
             if not notebook_lines:
                 continue
 
-            # Check not accepted (with repetitions)
-            to_check = []
-            oks = []
+            # Check repetitions
+            oks, to_check = [], []
             for line in notebook_lines:
-                key = line.analysis.id
+                key = (line.analysis.id, line.method.id)
                 if not line.accepted:
                     to_check.append(key)
                 else:
                     oks.append(key)
-            to_check = list(set(to_check))
-            oks = list(set(oks))
-            if to_check:
-                for key in oks:
-                    if key in to_check:
-                        to_check.remove(key)
+
+            to_check = list(set(to_check) - set(oks))
             if len(to_check) > 0:
                 continue
 
