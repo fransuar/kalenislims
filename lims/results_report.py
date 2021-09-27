@@ -6,7 +6,7 @@ from io import BytesIO
 from datetime import datetime
 from PyPDF2 import PdfFileMerger
 
-from trytond.model import Workflow, ModelView, ModelSQL, fields
+from trytond.model import Workflow, ModelView, ModelSQL, fields, Unique
 from trytond.wizard import Wizard, StateTransition, StateView, StateAction, \
     StateReport, Button
 from trytond.pool import Pool
@@ -1174,7 +1174,7 @@ class ResultsReportVersionDetail(Workflow, ModelSQL, ModelView):
         return 'lims-white'
 
     @classmethod
-    def _get_fields_from_samples(cls, samples):
+    def _get_fields_from_samples(cls, samples, generate_report_form=None):
         detail_default = {}
         if len(samples) > 1:
             detail_default['report_type_forced'] = 'polisample'
@@ -1476,6 +1476,15 @@ class ResultsReportVersionDetailLine(ModelSQL, ModelView):
                     'AND nl.notebook = %s',
                 (detail_sample.id, detail_sample.version_detail.id,
                  detail_sample.notebook.id))
+
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        t = cls.__table__()
+        cls._sql_constraints += [
+            ('line_uniq', Unique(t, t.detail_sample, t.notebook_line),
+                'lims.msg_results_report_line_unique_id'),
+            ]
 
     @staticmethod
     def default_hide():
@@ -1845,6 +1854,12 @@ class GenerateResultsReportResultAutNotebookLine(ModelSQL, ModelView):
     line = fields.Many2One('lims.notebook.line', 'Notebook Line',
         ondelete='CASCADE', select=True, required=True)
 
+    @classmethod
+    def __register__(cls, module_name):
+        super().__register__(module_name)
+        cursor = Transaction().connection.cursor()
+        cursor.execute('DELETE FROM "' + cls._table + '"')
+
 
 # TODO: remove
 class GenerateResultsReportResultAutExcludedNotebook(ModelSQL, ModelView):
@@ -1903,6 +1918,12 @@ class GenerateResultsReportResultAutExcludedNotebookLine(ModelSQL,
         'Notebook', ondelete='CASCADE', select=True, required=True)
     line = fields.Many2One('lims.notebook.line', 'Notebook Line',
         ondelete='CASCADE', select=True, required=True)
+
+    @classmethod
+    def __register__(cls, module_name):
+        super().__register__(module_name)
+        cursor = Transaction().connection.cursor()
+        cursor.execute('DELETE FROM "' + cls._table + '"')
 
 
 # TODO: remove
@@ -3055,7 +3076,7 @@ class GenerateReport(Wizard):
                         'samples': [('create', samples)],
                         }
                     details.update(ResultsDetail._get_fields_from_samples(
-                        samples))
+                        samples, self.start))
                     versions = {
                         'laboratory': laboratory_id,
                         'details': [('create', [details])],
