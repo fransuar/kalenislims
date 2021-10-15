@@ -899,6 +899,7 @@ class ResultsReportVersionDetail(Workflow, ModelSQL, ModelView):
                 ('id', '!=', detail.id),
                 ('report_version', '=', detail.report_version.id),
                 ('valid', '=', True),
+                ('type', '!=', 'preliminary'),
                 ], limit=1)
             if not valid_details:
                 continue
@@ -1315,7 +1316,7 @@ class ResultsReportVersionDetailSample(ModelSQL, ModelView):
     version_detail = fields.Many2One('lims.results_report.version.detail',
         'Report Detail', required=True, ondelete='CASCADE', select=True)
     notebook = fields.Many2One('lims.notebook', 'Notebook', required=True,
-        readonly=True)
+        readonly=True, select=True)
     notebook_lines = fields.One2Many('lims.results_report.version.detail.line',
         'detail_sample', 'Analysis')
     party = fields.Function(fields.Many2One('party.party', 'Party'),
@@ -3619,7 +3620,9 @@ class PrintResultReport(Wizard):
     print_ = StateReport('lims.result_report')
 
     def transition_start(self):
-        return 'print_'
+        if Transaction().context['active_ids']:
+            return 'print_'
+        return 'end'
 
     def do_print_(self, action):
         data = {}
@@ -4658,6 +4661,9 @@ class PrintGlobalResultReport(Wizard):
     def transition_start(self):
         pool = Pool()
         ResultsReport = pool.get('lims.results_report')
+
+        if not Transaction().context['active_ids']:
+            return 'end'
 
         for active_id in Transaction().context['active_ids']:
             results_report = ResultsReport(active_id)

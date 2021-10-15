@@ -4,6 +4,7 @@
 
 from trytond.pool import Pool
 from . import configuration
+from . import html_template
 from . import party
 from . import sale
 from . import sample
@@ -13,13 +14,19 @@ from . import results_report
 def register():
     Pool.register(
         configuration.Configuration,
-        configuration.Clause,
+        configuration.Cron,
+        html_template.SaleClauseTemplate,
+        html_template.SaleReportTemplate,
         party.Party,
         sale.Sale,
-        sale.SaleClause,
+        sale.SaleMailing,
+        sale.SaleSection,
         sale.SaleLine,
         sale.SaleLoadServicesStart,
         sale.SaleLoadAnalysisStart,
+        sale.SendQuotationStart,
+        sale.SendQuotationSucceed,
+        sale.SendQuotationFailed,
         sample.CreateSampleStart,
         sample.Sample,
         sample.SampleSaleLine,
@@ -31,8 +38,12 @@ def register():
     Pool.register(
         sale.SaleLoadServices,
         sale.SaleLoadAnalysis,
+        sale.SendQuotation,
         sample.CreateSample,
         results_report.OpenSampleSale,
         results_report.OpenResultsDetailSale,
         results_report.OpenResultsDetailAttachment,
         module='lims_sale', type_='wizard')
+    Pool.register(
+        sale.SaleReport,
+        module='lims_sale', type_='report')

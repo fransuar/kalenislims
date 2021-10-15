@@ -109,7 +109,7 @@ class ResultsReportVersionDetail(metaclass=PoolMeta):
         pool = Pool()
         Notebook = pool.get('lims.notebook')
         Diagnostician = pool.get('lims.diagnostician')
-        ReportTemplate = pool.get('lims.result_report.template')
+        ReportTemplate = pool.get('lims.report.template')
 
         detail_default = super()._get_fields_from_samples(samples,
             generate_report_form)
@@ -246,8 +246,7 @@ class ChangeSampleDiagnosticianStart(ModelView):
     'Change Sample Diagnostician'
     __name__ = 'lims.notebook.change_diagnostician.start'
 
-    diagnostician = fields.Many2One('lims.diagnostician', 'Diagnostician',
-        required=True)
+    diagnostician = fields.Many2One('lims.diagnostician', 'Diagnostician')
 
 
 class ChangeSampleDiagnostician(Wizard):
@@ -270,7 +269,9 @@ class ChangeSampleDiagnostician(Wizard):
         for notebook in Notebook.browse(Transaction().context['active_ids']):
             samples_ids.add(notebook.fraction.sample.id)
         samples = Sample.browse(list(samples_ids))
-        Sample.write(samples, {'diagnostician': self.start.diagnostician.id})
+        diagnostician = (self.start.diagnostician and
+            self.start.diagnostician.id or None)
+        Sample.write(samples, {'diagnostician': diagnostician})
         return 'end'
 
 
