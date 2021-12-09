@@ -27,6 +27,7 @@ def register():
         interface.Interface,
         interface.Data,
         planification.Planification,
+        planification.PlanificationAnalysisSheet,
         planification.SearchAnalysisSheetStart,
         planification.SearchAnalysisSheetNext,
         planification.RelateTechniciansStart,
@@ -46,6 +47,7 @@ def register():
         notebook.EditGroupedDataStart,
         notebook.EditMultiSampleDataStart,
         notebook.MultiSampleData,
+        notebook.MoveDataStart,
         laboratory.NotebookRule,
         laboratory.NotebookRuleCondition,
         module='lims_analysis_sheet', type_='model')
@@ -67,6 +69,7 @@ def register():
         notebook.EvaluateRules,
         notebook.EditGroupedData,
         notebook.EditMultiSampleData,
+        notebook.MoveData,
         module='lims_analysis_sheet', type_='wizard')
     Pool.register(
         sheet.AnalysisSheetReport,

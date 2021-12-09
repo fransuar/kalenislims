@@ -208,6 +208,22 @@ class Sample(metaclass=PoolMeta):
     def search_plant(cls, name, clause):
         return [('equipment.plant',) + tuple(clause[1:])]
 
+    def _order_equipment_field(name):
+        def order_field(tables):
+            Equipment = Pool().get('lims.equipment')
+            field = Equipment._fields[name]
+            table, _ = tables[None]
+            equipment_tables = tables.get('equipment')
+            if equipment_tables is None:
+                equipment = Equipment.__table__()
+                equipment_tables = {
+                    None: (equipment, equipment.id == table.equipment),
+                    }
+                tables['equipment'] = equipment_tables
+            return field.convert_order(name, equipment_tables, Equipment)
+        return staticmethod(order_field)
+    order_plant = _order_equipment_field('plant')
+
     @classmethod
     def get_equipment_field(cls, samples, names):
         result = {}
@@ -336,13 +352,19 @@ class SampleEditionLog(ModelSQL, ModelView):
 class Fraction(metaclass=PoolMeta):
     __name__ = 'lims.fraction'
 
+    equipment = fields.Function(fields.Many2One('lims.equipment', 'Equipment'),
+        'get_sample_field', searcher='search_sample_field')
+    component = fields.Function(fields.Many2One('lims.component', 'Component'),
+        'get_sample_field', searcher='search_sample_field')
+    comercial_product = fields.Function(fields.Many2One(
+        'lims.comercial.product', 'Comercial Product'),
+        'get_sample_field', searcher='search_sample_field')
     ind_component = fields.Function(fields.Integer('Hs/Km Component'),
         'get_sample_field', searcher='search_sample_field')
 
     def _order_sample_field(name):
         def order_field(tables):
-            pool = Pool()
-            Sample = pool.get('lims.sample')
+            Sample = Pool().get('lims.sample')
             field = Sample._fields[name]
             table, _ = tables[None]
             sample_tables = tables.get('sample')
@@ -354,6 +376,9 @@ class Fraction(metaclass=PoolMeta):
                 tables['sample'] = sample_tables
             return field.convert_order(name, sample_tables, Sample)
         return staticmethod(order_field)
+    order_equipment = _order_sample_field('equipment')
+    order_component = _order_sample_field('component')
+    order_comercial_product = _order_sample_field('comercial_product')
     order_ind_component = _order_sample_field('ind_component')
 
 
@@ -878,7 +903,7 @@ class EditSample(Wizard):
             ResultsReport.write(reports, {'party': party_id})
 
     def check_typifications(self, sample):
-        analysis_domain_ids = sample.on_change_with_analysis_domain()
+        analysis_domain_ids = self._get_analysis_domain(sample)
         for f in sample.fractions:
             for s in f.services:
                 if s.analysis.id not in analysis_domain_ids:
@@ -886,6 +911,51 @@ class EditSample(Wizard):
                         analysis=s.analysis.rec_name,
                         product_type=sample.product_type.rec_name,
                         matrix=sample.matrix.rec_name))
+
+    def _get_analysis_domain(self, sample):
+        cursor = Transaction().connection.cursor()
+        pool = Pool()
+        Typification = pool.get('lims.typification')
+        CalculatedTypification = pool.get('lims.typification.calculated')
+        Analysis = pool.get('lims.analysis')
+
+        if not sample.product_type or not sample.matrix:
+            return []
+
+        cursor.execute('SELECT DISTINCT(analysis) '
+            'FROM "' + Typification._table + '" '
+            'WHERE product_type = %s '
+                'AND matrix = %s '
+                'AND valid',
+            (sample.product_type.id, sample.matrix.id))
+        typified_analysis = [a[0] for a in cursor.fetchall()]
+        if not typified_analysis:
+            return []
+
+        cursor.execute('SELECT id '
+            'FROM "' + Analysis._table + '" '
+            'WHERE type = \'analysis\' '
+                'AND behavior IN (\'normal\', \'internal_relation\') '
+                'AND state = \'active\'')
+        disabled_analysis = [a[0] for a in cursor.fetchall()]
+        if disabled_analysis:
+            typified_analysis = list(set(typified_analysis) -
+                set(disabled_analysis))
+
+        cursor.execute('SELECT DISTINCT(analysis) '
+            'FROM "' + CalculatedTypification._table + '" '
+            'WHERE product_type = %s '
+                'AND matrix = %s',
+            (sample.product_type.id, sample.matrix.id))
+        typified_sets_groups = [a[0] for a in cursor.fetchall()]
+
+        cursor.execute('SELECT id '
+            'FROM "' + Analysis._table + '" '
+            'WHERE behavior = \'additional\' '
+                'AND state = \'active\'')
+        additional_analysis = [a[0] for a in cursor.fetchall()]
+
+        return typified_analysis + typified_sets_groups + additional_analysis
 
     @classmethod
     def update_laboratory_notebook(self, sample):

@@ -2290,6 +2290,10 @@ msgctxt "field:lims.lab.method,determination:"
 msgid "Determination"
 msgstr "Determinación"
 
+msgctxt "field:lims.lab.method,equivalence_code:"
+msgid "Equivalence Code"
+msgstr "Código de equivalencia"
+
 msgctxt "field:lims.lab.method,name:"
 msgid "Name"
 msgstr "Nombre"
@@ -2726,6 +2730,15 @@ msgstr "Informe destino sólo lectura"
 msgctxt "field:lims.notebook.generate_results_report.start,reports_created:"
 msgid "Reports created"
 msgstr "Informes creados"
+
+msgctxt "field:lims.notebook.generate_results_report.start,review_reason:"
+msgid "Review reason"
+msgstr "Motivo de revisión"
+
+msgctxt ""
+"field:lims.notebook.generate_results_report.start,review_reason_print:"
+msgid "Print review reason in next version"
+msgstr "Imprimir motivo de revisión en próxima versión"
 
 msgctxt "field:lims.notebook.generate_results_report.start,type:"
 msgid "Type"
@@ -5081,6 +5094,10 @@ msgctxt "field:lims.results_report.version,number:"
 msgid "Number"
 msgstr "Número"
 
+msgctxt "field:lims.results_report.version,party:"
+msgid "Party"
+msgstr "Entidad"
+
 msgctxt "field:lims.results_report.version,report_type:"
 msgid "Report type"
 msgstr "Tipo de informe"
@@ -5360,6 +5377,10 @@ msgstr "Resultado"
 msgctxt "field:lims.results_report.version.detail.line,start_date:"
 msgid "Start date"
 msgstr "Fecha de inicio"
+
+msgctxt "field:lims.results_report.version.detail.line,uncertainty:"
+msgid "Uncertainty"
+msgstr "Incertidumbre"
 
 msgctxt "field:lims.results_report.version.detail.line,urgent:"
 msgid "Urgent"

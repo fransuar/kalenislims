@@ -147,6 +147,18 @@ msgctxt "field:lims.analysis_sheet.import_file.start,origin_file:"
 msgid "Origin File"
 msgstr "Archivo origen"
 
+msgctxt "field:lims.analysis_sheet.move_data.start,analysis_sheet:"
+msgid "Analysis Sheet"
+msgstr "Hoja de análisis"
+
+msgctxt "field:lims.analysis_sheet.move_data.start,move_to:"
+msgid "Move to"
+msgstr "Mover a"
+
+msgctxt "field:lims.analysis_sheet.move_data.start,table:"
+msgid "Table"
+msgstr "Tabla"
+
 msgctxt "field:lims.analysis_sheet.print_report.ask,print_expression_column:"
 msgid "Print formula column"
 msgstr "Incluir columnas con fórmulas"
@@ -194,6 +206,10 @@ msgstr "Origen"
 msgctxt "field:lims.configuration,analysis_sheet_sequence:"
 msgid "Analysis Sheet Sequence"
 msgstr "Secuencia de Hoja de análisis"
+
+msgctxt "field:lims.configuration,planification_update_draft_sheet:"
+msgid "Update draft sheets when planning analyzes"
+msgstr "Actualizar Hojas de análisis en borrador al planificar"
 
 msgctxt "field:lims.configuration.sequence,analysis_sheet_sequence:"
 msgid "Analysis Sheet Sequence"
@@ -250,6 +266,30 @@ msgstr "Cant. Hojas en Cola"
 msgctxt "field:lims.notebook.line,analysis_sheet:"
 msgid "Analysis Sheet"
 msgstr "Hoja de análisis"
+
+msgctxt "field:lims.planification,analysis_sheets:"
+msgid "Analysis sheets to update"
+msgstr "Hojas de análisis para actualizar"
+
+msgctxt "field:lims.planification,planification_update_draft_sheet:"
+msgid "Update draft sheets"
+msgstr "Actualizar Hojas de análisis en borrador"
+
+msgctxt "field:lims.planification.analysis_sheet,analysis_sheet:"
+msgid "Analysis Sheet"
+msgstr "Hoja de análisis"
+
+msgctxt "field:lims.planification.analysis_sheet,planification:"
+msgid "Planification"
+msgstr "Planificación"
+
+msgctxt "field:lims.planification.analysis_sheet,professional:"
+msgid "Laboratory professional"
+msgstr "Profesional de laboratorio"
+
+msgctxt "field:lims.planification.analysis_sheet,template:"
+msgid "Template"
+msgstr "Plantilla"
 
 msgctxt "field:lims.planification.professional,name:"
 msgid "Name"
@@ -540,6 +580,10 @@ msgctxt "model:ir.action,name:wiz_analysis_sheet_limits_validation"
 msgid "Limits Validation"
 msgstr "05) Validación de límites"
 
+msgctxt "model:ir.action,name:wiz_analysis_sheet_move_data"
+msgid "Move Data"
+msgstr "Mover datos"
+
 msgctxt "model:ir.action,name:wiz_analysis_sheet_open_data"
 msgid "Open Analysis Sheet Data"
 msgstr "Abrir datos de Hoja de análisis"
@@ -686,6 +730,10 @@ msgctxt "model:lims.analysis_sheet.import_file.start,name:"
 msgid "Import Analysis Sheet File"
 msgstr "Importar archivo de datos"
 
+msgctxt "model:lims.analysis_sheet.move_data.start,name:"
+msgid "Move Data"
+msgstr "Mover datos"
+
 msgctxt "model:lims.analysis_sheet.print_report.ask,name:"
 msgid "Analysis Sheet Report"
 msgstr "Informe de Hoja de análisis"
@@ -705,6 +753,10 @@ msgstr "Verificación de resultados"
 msgctxt "model:lims.interface.multi_sample_data,name:"
 msgid "Multi Sample Data"
 msgstr "Datos multi muestra"
+
+msgctxt "model:lims.planification.analysis_sheet,name:"
+msgid "Planification - Analysis Sheet"
+msgstr "Planificación - Hoja de análisis"
 
 msgctxt "model:lims.planification.professional,name:"
 msgid "Planification Professional"
@@ -1026,6 +1078,14 @@ msgctxt "selection:lims.analysis_sheet.add_control.start,type:"
 msgid "RM"
 msgstr "RM"
 
+msgctxt "selection:lims.analysis_sheet.move_data.start,move_to:"
+msgid "Existing sheet"
+msgstr "Hoja existente"
+
+msgctxt "selection:lims.analysis_sheet.move_data.start,move_to:"
+msgid "New sheet"
+msgstr "Nueva hoja"
+
 msgctxt "selection:lims.interface,export_field_separator:"
 msgid "Colon (:)"
 msgstr "Dos puntos (:)"
@@ -1163,6 +1223,10 @@ msgid "Export"
 msgstr "Exportación"
 
 msgctxt "view:lims.planification:"
+msgid "Analysis sheets"
+msgstr "Hojas de análisis"
+
+msgctxt "view:lims.planification:"
 msgid "Search Analysis Sheets"
 msgstr "Buscar Hojas de ensayos"
 
@@ -1213,6 +1277,14 @@ msgstr "Importar datos"
 msgctxt "wizard_button:lims.analysis_sheet.import_file,ask_file,end:"
 msgid "Cancel"
 msgstr "Cancelar"
+
+msgctxt "wizard_button:lims.analysis_sheet.move_data,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:lims.analysis_sheet.move_data,start,move:"
+msgid "Move"
+msgstr "Mover"
 
 msgctxt "wizard_button:lims.analysis_sheet.print_report,ask,end:"
 msgid "Cancel"

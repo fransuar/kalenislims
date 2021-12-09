@@ -540,11 +540,11 @@ class ResultsReportVersionDetailSample(metaclass=PoolMeta):
         depends=['component'])
     free_precedents = fields.Boolean('Free precedents')
     precedent1_diagnosis = fields.Function(fields.Text(
-        'Diagnosis Precedent 1'), 'get_precedent_diagnosis')
+        'Diagnosis Precedent 1'), 'on_change_with_precedent1_diagnosis')
     precedent2_diagnosis = fields.Function(fields.Text(
-        'Diagnosis Precedent 2'), 'get_precedent_diagnosis')
+        'Diagnosis Precedent 2'), 'on_change_with_precedent2_diagnosis')
     precedent3_diagnosis = fields.Function(fields.Text(
-        'Diagnosis Precedent 3'), 'get_precedent_diagnosis')
+        'Diagnosis Precedent 3'), 'on_change_with_precedent3_diagnosis')
     precedent1_diagnosis_states = fields.Function(fields.Dict(
         'lims.diagnosis.state', 'Diagnosis States Precedent 1'),
         'get_precedent_diagnosis')
@@ -821,10 +821,15 @@ class ResultsReportVersionDetailLine(metaclass=PoolMeta):
         NotebookLine = pool.get('lims.notebook.line')
         if not precedent:
             return ''
+        if not line.notebook_line:
+            return ''
         precedent_line = NotebookLine.search([
             ('notebook', '=', precedent),
             ('analysis', '=', line.analysis),
-            ('method', '=', line.method),
+            ['OR', ('method', '=', line.method), [
+                ('method.equivalence_code', 'not in', [None, '']),
+                ('method.equivalence_code', '=', line.method.equivalence_code),
+                ]],
             ('accepted', '=', True),
             ])
         if not precedent_line:

@@ -154,6 +154,22 @@ class ResultsReport(ModelSQL, ModelView):
     def search_entry_field(cls, name, clause):
         return [('entry.' + name,) + tuple(clause[1:])]
 
+    def _order_entry_field(name):
+        def order_field(tables):
+            Entry = Pool().get('lims.entry')
+            field = Entry._fields[name]
+            table, _ = tables[None]
+            entry_tables = tables.get('entry')
+            if entry_tables is None:
+                entry = Entry.__table__()
+                entry_tables = {
+                    None: (entry, entry.id == table.entry),
+                    }
+                tables['entry'] = entry_tables
+            return field.convert_order(name, entry_tables, Entry)
+        return staticmethod(order_field)
+    order_invoice_party = _order_entry_field('invoice_party')
+
     @classmethod
     def get_single_sending_report_ready(cls, reports, name):
         cursor = Transaction().connection.cursor()
@@ -384,6 +400,8 @@ class ResultsReportVersion(ModelSQL, ModelView):
         'report_version', 'Detail lines', readonly=True)
     report_type = fields.Function(fields.Char('Report type'),
         'get_report_type')
+    party = fields.Function(fields.Many2One('party.party', 'Party'),
+       'get_report_field', searcher='search_report_field')
 
     @classmethod
     def __setup__(cls):
@@ -425,6 +443,46 @@ class ResultsReportVersion(ModelSQL, ModelView):
             values['number'] = cls.get_number(values['results_report'],
                 values['laboratory'])
         return super().create(vlist)
+
+    @classmethod
+    def get_report_field(cls, versions, names):
+        result = {}
+        for name in names:
+            result[name] = {}
+            if cls._fields[name]._type == 'many2one':
+                for v in versions:
+                    field = getattr(v.results_report, name, None)
+                    result[name][v.id] = field.id if field else None
+            elif cls._fields[name]._type == 'boolean':
+                for v in versions:
+                    field = getattr(v.results_report, name, False)
+                    result[name][v.id] = field
+            else:
+                for v in versions:
+                    field = getattr(v.results_report, name, None)
+                    result[name][v.id] = field
+        return result
+
+    @classmethod
+    def search_report_field(cls, name, clause):
+        return [('results_report.' + name,) + tuple(clause[1:])]
+
+    def _order_report_field(name):
+        def order_field(tables):
+            ResultsReport = Pool().get('lims.results_report')
+            field = ResultsReport._fields[name]
+            table, _ = tables[None]
+            report_tables = tables.get('results_report')
+            if report_tables is None:
+                results_report = ResultsReport.__table__()
+                report_tables = {
+                    None: (results_report,
+                        results_report.id == table.results_report),
+                    }
+                tables['results_report'] = report_tables
+            return field.convert_order(name, report_tables, ResultsReport)
+        return staticmethod(order_field)
+    order_party = _order_report_field('party')
 
 
 class ResultsReportVersionDetail(Workflow, ModelSQL, ModelView):
@@ -500,10 +558,16 @@ class ResultsReportVersionDetail(Workflow, ModelSQL, ModelView):
     release_uid = fields.Many2One('res.user', 'Release user', readonly=True)
     release_date = fields.DateTime('Release date', readonly=True)
     review_reason = fields.Text('Review reason', translate=True,
-        states={'readonly': True})
+        states={
+            'readonly': Or(Bool(Eval('valid')), Eval('state') != 'released'),
+            },
+        depends=['state', 'valid'])
     review_reason_print = fields.Boolean(
         'Print review reason in next version',
-        states={'readonly': True})
+        states={
+            'readonly': Or(Bool(Eval('valid')), Eval('state') != 'released'),
+            },
+        depends=['state', 'valid'])
     annulment_uid = fields.Many2One('res.user', 'Annulment user',
         readonly=True)
     annulment_date = fields.DateTime('Annulment date', readonly=True)
@@ -940,6 +1004,20 @@ class ResultsReportVersionDetail(Workflow, ModelSQL, ModelView):
         return detail_default
 
     @classmethod
+    def update_review_reason(cls, detail, review_reason,
+            review_reason_print):
+        valid_detail = cls.search([
+            ('report_version', '=', detail.report_version.id),
+            ('valid', '=', True),
+            ('type', '!=', 'preliminary'),
+            ], limit=1)
+        if valid_detail:
+            cls.write(valid_detail, {
+                'review_reason': review_reason,
+                'review_reason_print': review_reason_print,
+                })
+
+    @classmethod
     @ModelView.button
     def release_all_lang(cls, details):
         for detail in details:
@@ -1041,21 +1119,52 @@ class ResultsReportVersionDetail(Workflow, ModelSQL, ModelView):
         result = {}
         for name in names:
             result[name] = {}
-            for d in details:
-                field = getattr(d.report_version, name, None)
-                result[name][d.id] = field.id if field else None
+            if cls._fields[name]._type == 'many2one':
+                for d in details:
+                    field = getattr(d.report_version, name, None)
+                    result[name][d.id] = field.id if field else None
+            elif cls._fields[name]._type == 'boolean':
+                for d in details:
+                    field = getattr(d.report_version, name, False)
+                    result[name][d.id] = field
+            else:
+                for d in details:
+                    field = getattr(d.report_version, name, None)
+                    result[name][d.id] = field
         return result
 
     @classmethod
     def search_version_field(cls, name, clause):
         return [('report_version.' + name,) + tuple(clause[1:])]
 
+    def _order_version_field(name):
+        def order_field(tables):
+            ResultsVersion = Pool().get('lims.results_report.version')
+            field = ResultsVersion._fields[name]
+            table, _ = tables[None]
+            version_tables = tables.get('report_version')
+            if version_tables is None:
+                report_version = ResultsVersion.__table__()
+                version_tables = {
+                    None: (report_version,
+                        report_version.id == table.report_version),
+                    }
+                tables['report_version'] = version_tables
+            return field.convert_order(name, version_tables, ResultsVersion)
+        return staticmethod(order_field)
+    order_laboratory = _order_version_field('laboratory')
+
     @classmethod
     def get_report_field(cls, details, names):
         result = {}
         for name in names:
             result[name] = {}
-            if name in ('cie_fraction_type', 'english_report'):
+            if cls._fields[name]._type == 'many2one':
+                for d in details:
+                    field = getattr(d.report_version.results_report, name,
+                        None)
+                    result[name][d.id] = field.id if field else None
+            elif cls._fields[name]._type == 'boolean':
                 for d in details:
                     field = getattr(d.report_version.results_report, name,
                         False)
@@ -1064,12 +1173,31 @@ class ResultsReportVersionDetail(Workflow, ModelSQL, ModelView):
                 for d in details:
                     field = getattr(d.report_version.results_report, name,
                         None)
-                    result[name][d.id] = field.id if field else None
+                    result[name][d.id] = field
         return result
 
     @classmethod
     def search_report_field(cls, name, clause):
         return [('report_version.results_report.' + name,) + tuple(clause[1:])]
+
+    def _order_report_field(name):
+        def order_field(tables):
+            pool = Pool()
+            ResultsReport = pool.get('lims.results_report')
+            ResultsVersion = pool.get('lims.results_report.version')
+            field = ResultsReport._fields[name]
+            table, _ = tables[None]
+            version_tables = tables.get('report_version')
+            if version_tables is None:
+                report_version = ResultsVersion.__table__()
+                version_tables = {
+                    None: (report_version,
+                        report_version.id == table.report_version),
+                    }
+                tables['report_version'] = version_tables
+            return field.convert_order(name, version_tables, ResultsVersion)
+        return staticmethod(order_field)
+    order_party = _order_report_field('party')
 
     @classmethod
     def get_entry_field(cls, details, names):
@@ -1083,6 +1211,7 @@ class ResultsReportVersionDetail(Workflow, ModelSQL, ModelView):
                             name, None) or None)
                     result[name][d.id] = field.id if field else None
             elif cls._fields[name]._type == 'boolean':
+                for d in details:
                     field = (d.report_version.results_report.entry and
                         getattr(d.report_version.results_report.entry,
                             name, False) or False)
@@ -2775,6 +2904,15 @@ class GenerateReportStart(ModelView):
         states={'invisible': ~Eval('type').in_([
             'complementary', 'corrective'])},
         depends=['type'])
+    review_reason = fields.Text('Review reason',
+        states={'invisible': ~Eval('type').in_([
+            'complementary', 'corrective'])},
+        depends=['type'])
+    review_reason_print = fields.Boolean(
+        'Print review reason in next version',
+        states={'invisible': ~Eval('type').in_([
+            'complementary', 'corrective'])},
+        depends=['type'])
     reports_created = fields.One2Many('lims.results_report.version.detail',
         None, 'Reports created')
     group_samples = fields.Boolean('Group samples in the same report',
@@ -2995,6 +3133,9 @@ class GenerateReport(Wizard):
                     details['report_version'] = actual_version.id
                     detail, = ResultsDetail.create([details])
                     ResultsDetail.update_from_valid_version([detail])
+                    ResultsDetail.update_review_reason(detail,
+                        self.start.review_reason,
+                        self.start.review_reason_print)
                     reports_details = [detail.id]
                 else:
                     draft_detail = draft_detail[0]
@@ -3173,6 +3314,9 @@ class GenerateReport(Wizard):
             details['report_version'] = actual_version.id
             detail, = ResultsDetail.create([details])
             ResultsDetail.update_from_valid_version([detail])
+            ResultsDetail.update_review_reason(detail,
+                self.start.review_reason,
+                self.start.review_reason_print)
             reports_details = [detail.id]
             return reports_details
 
@@ -4566,24 +4710,24 @@ class ResultReport(Report):
         return value or ''
 
     @classmethod
-    def get_grouped_lines(cls, sample, grouped_by=None):
+    def get_grouped_lines(cls, sample, grouped_by=None, lang=None):
         if not sample:
             return []
         if not grouped_by:
             grouped_by = 'none'
         try:
             return getattr(cls,
-                '_get_lines_grouped_by_%s' % grouped_by)(sample)
+                '_get_lines_grouped_by_%s' % grouped_by)(sample, lang)
         except AttributeError:
             return []
 
     @classmethod
-    def _get_lines_grouped_by_none(cls, sample):
+    def _get_lines_grouped_by_none(cls, sample, lang=None):
         res = sample.notebook_lines
         return res
 
     @classmethod
-    def _get_lines_grouped_by_origin(cls, sample):
+    def _get_lines_grouped_by_origin(cls, sample, lang=None):
         all_lines = {}
         for nl in sample.notebook_lines:
             key = nl.notebook_line.analysis_origin

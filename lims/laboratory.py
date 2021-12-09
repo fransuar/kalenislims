@@ -154,6 +154,7 @@ class LabMethod(ModelSQL, ModelView):
         'Estimated number of days for results')
     results_waiting = fields.One2Many('lims.lab.method.results_waiting',
         'method', 'Waiting times per client')
+    equivalence_code = fields.Char('Equivalence Code')
 
     @classmethod
     def __setup__(cls):
@@ -586,7 +587,7 @@ class NotebookRule(ModelSQL, ModelView):
 
     name = fields.Char('Name', required=True)
     analysis = fields.Many2One('lims.analysis', 'Trigger Analysis',
-        required=True, domain=[
+        required=True, select=True, domain=[
             ('state', '=', 'active'),
             ('type', '=', 'analysis'),
             ('behavior', '!=', 'additional'),
