@@ -294,7 +294,7 @@ class ResultsReportVersionDetailSample(metaclass=PoolMeta):
             plot = tc.chart.get_plot(session_id)
             charts.append(plot)
 
-        div_row = '<div>'
+        div_row = '<div style="clear:both;">'
         charts_x_row = int(self.version_detail.charts_x_row) or 1
         if charts_x_row == 1:
             div_col = '<div style="float:left; width:100%;">'
@@ -323,6 +323,24 @@ class ResultsReportVersionDetailSample(metaclass=PoolMeta):
 
         content += end_div
         return content
+
+    def get_trend_charts_odt(self):
+        pool = Pool()
+        OpenTrendChart = pool.get('lims.trend.chart.open', type='wizard')
+
+        if not self.version_detail.trend_charts:
+            return []
+
+        charts = []
+        for tc in self.version_detail.trend_charts:
+            session_id, _, _ = OpenTrendChart.create()
+            open_chart = OpenTrendChart(session_id)
+            open_chart.start.chart = tc.chart
+            open_chart.start.notebook = self.notebook
+            open_chart.transition_compute()
+            plot = tc.chart.get_plot(session_id)
+            charts.append(plot)
+        return charts
 
     def _get_resource(self, obj):
         return '%s,%s' % (obj.__name__, obj.id)
