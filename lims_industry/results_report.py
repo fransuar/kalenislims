@@ -174,7 +174,7 @@ class ResultsReport(metaclass=PoolMeta):
     def get_components_list(cls, reports, name):
         cursor = Transaction().connection.cursor()
         pool = Pool()
-        ComponentType = pool.get('lims.component.type')
+        ComponentKind = pool.get('lims.component.kind')
         Component = pool.get('lims.component')
         Sample = pool.get('lims.sample')
         Fraction = pool.get('lims.fraction')
@@ -187,9 +187,9 @@ class ResultsReport(metaclass=PoolMeta):
         for r in reports:
             result[r.id] = ''
             cursor.execute('SELECT DISTINCT(ct.name) '
-                'FROM "' + ComponentType._table + '" ct '
+                'FROM "' + ComponentKind._table + '" ct '
                     'INNER JOIN "' + Component._table + '" c '
-                    'ON ct.id = c.type '
+                    'ON ct.id = c.kind '
                     'INNER JOIN "' + Sample._table + '" s '
                     'ON c.id = s.component '
                     'INNER JOIN "' + Fraction._table + '" f '
@@ -214,7 +214,7 @@ class ResultsReport(metaclass=PoolMeta):
     def search_components_list(cls, name, clause):
         cursor = Transaction().connection.cursor()
         pool = Pool()
-        ComponentType = pool.get('lims.component.type')
+        ComponentKind = pool.get('lims.component.kind')
         Component = pool.get('lims.component')
         Sample = pool.get('lims.sample')
         Fraction = pool.get('lims.fraction')
@@ -225,9 +225,9 @@ class ResultsReport(metaclass=PoolMeta):
 
         value = clause[2]
         cursor.execute('SELECT rv.results_report '
-            'FROM "' + ComponentType._table + '" ct '
+            'FROM "' + ComponentKind._table + '" ct '
                 'INNER JOIN "' + Component._table + '" c '
-                'ON ct.id = c.type '
+                'ON ct.id = c.kind '
                 'INNER JOIN "' + Sample._table + '" s '
                 'ON c.id = s.component '
                 'INNER JOIN "' + Fraction._table + '" f '
@@ -277,7 +277,7 @@ class ResultsReport2(metaclass=PoolMeta):
             'component_customer_description': (sample and sample.component and
                 sample.component.customer_description or ''),
             'component_type': (sample and sample.component and
-                sample.component.type.name or ''),
+                sample.component.kind.name or ''),
             'ind_equipment': (sample and
                 sample.notebook.fraction.sample.ind_equipment and
                 (str(sample.notebook.fraction.sample.ind_equipment) +
@@ -425,7 +425,7 @@ class ResultsReportVersionDetail(metaclass=PoolMeta):
     def get_components_list(cls, details, name):
         cursor = Transaction().connection.cursor()
         pool = Pool()
-        ComponentType = pool.get('lims.component.type')
+        ComponentKind = pool.get('lims.component.kind')
         Component = pool.get('lims.component')
         Sample = pool.get('lims.sample')
         Fraction = pool.get('lims.fraction')
@@ -436,9 +436,9 @@ class ResultsReportVersionDetail(metaclass=PoolMeta):
         for d in details:
             result[d.id] = ''
             cursor.execute('SELECT DISTINCT(ct.name) '
-                'FROM "' + ComponentType._table + '" ct '
+                'FROM "' + ComponentKind._table + '" ct '
                     'INNER JOIN "' + Component._table + '" c '
-                    'ON ct.id = c.type '
+                    'ON ct.id = c.kind '
                     'INNER JOIN "' + Sample._table + '" s '
                     'ON c.id = s.component '
                     'INNER JOIN "' + Fraction._table + '" f '
@@ -458,7 +458,7 @@ class ResultsReportVersionDetail(metaclass=PoolMeta):
     def search_components_list(cls, name, clause):
         cursor = Transaction().connection.cursor()
         pool = Pool()
-        ComponentType = pool.get('lims.component.type')
+        ComponentKind = pool.get('lims.component.kind')
         Component = pool.get('lims.component')
         Sample = pool.get('lims.sample')
         Fraction = pool.get('lims.fraction')
@@ -467,9 +467,9 @@ class ResultsReportVersionDetail(metaclass=PoolMeta):
 
         value = clause[2]
         cursor.execute('SELECT rs.version_detail '
-            'FROM "' + ComponentType._table + '" ct '
+            'FROM "' + ComponentKind._table + '" ct '
                 'INNER JOIN "' + Component._table + '" c '
-                'ON ct.id = c.type '
+                'ON ct.id = c.kind '
                 'INNER JOIN "' + Sample._table + '" s '
                 'ON c.id = s.component '
                 'INNER JOIN "' + Fraction._table + '" f '
@@ -524,20 +524,35 @@ class ResultsReportVersionDetailSample(metaclass=PoolMeta):
             [('fraction.sample.state', '!=', 'annulled')])],
         depends=['free_precedents', 'component'])
     precedent4 = fields.Many2One('lims.notebook', 'Precedent 4',
-        domain=[('component', '=', Eval('component'))],
-        depends=['component'])
+        domain=[If(~Eval('free_precedents'),
+            [('component', '=', Eval('component')),
+            ('fraction.sample.state', '!=', 'annulled')],
+            [('fraction.sample.state', '!=', 'annulled')])],
+        depends=['free_precedents', 'component'])
     precedent5 = fields.Many2One('lims.notebook', 'Precedent 5',
-        domain=[('component', '=', Eval('component'))],
-        depends=['component'])
+        domain=[If(~Eval('free_precedents'),
+            [('component', '=', Eval('component')),
+            ('fraction.sample.state', '!=', 'annulled')],
+            [('fraction.sample.state', '!=', 'annulled')])],
+        depends=['free_precedents', 'component'])
     precedent6 = fields.Many2One('lims.notebook', 'Precedent 6',
-        domain=[('component', '=', Eval('component'))],
-        depends=['component'])
+        domain=[If(~Eval('free_precedents'),
+            [('component', '=', Eval('component')),
+            ('fraction.sample.state', '!=', 'annulled')],
+            [('fraction.sample.state', '!=', 'annulled')])],
+        depends=['free_precedents', 'component'])
     precedent7 = fields.Many2One('lims.notebook', 'Precedent 7',
-        domain=[('component', '=', Eval('component'))],
-        depends=['component'])
+        domain=[If(~Eval('free_precedents'),
+            [('component', '=', Eval('component')),
+            ('fraction.sample.state', '!=', 'annulled')],
+            [('fraction.sample.state', '!=', 'annulled')])],
+        depends=['free_precedents', 'component'])
     precedent8 = fields.Many2One('lims.notebook', 'Precedent 8',
-        domain=[('component', '=', Eval('component'))],
-        depends=['component'])
+        domain=[If(~Eval('free_precedents'),
+            [('component', '=', Eval('component')),
+            ('fraction.sample.state', '!=', 'annulled')],
+            [('fraction.sample.state', '!=', 'annulled')])],
+        depends=['free_precedents', 'component'])
     free_precedents = fields.Boolean('Free precedents')
     precedent1_diagnosis = fields.Function(fields.Text(
         'Diagnosis Precedent 1'), 'on_change_with_precedent1_diagnosis')
@@ -695,7 +710,11 @@ class ResultsReportVersionDetailSample(metaclass=PoolMeta):
             ('component', '=', sample.component),
             ('fraction.sample.state', '!=', 'annulled'),
             ('invoice_party', '=', sample.notebook.invoice_party),
-            ], order=[('id', 'DESC')], limit=3)
+            ], order=[
+            ('fraction.sample.ind_sampling_date', 'DESC'),
+            ('fraction.sample.ind_equipment', 'DESC'),
+            ('fraction.sample.date', 'DESC'),
+            ], limit=3)
         return precedents
 
     @classmethod

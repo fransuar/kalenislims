@@ -4,10 +4,10 @@
 import logging
 from io import BytesIO
 from datetime import datetime
+from email import encoders
 from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.mime.application import MIMEApplication
-from email.header import Header
 from PyPDF2 import PdfFileMerger
 from PyPDF2.utils import PdfReadError
 
@@ -51,6 +51,9 @@ class Sale(metaclass=PoolMeta):
             ],
         states={'readonly': Eval('state') != 'draft'},
         depends=['state'])
+    clause_template = fields.Many2One('sale.clause.template',
+        'Clauses Template', depends=['state'],
+        states={'readonly': Eval('state') != 'draft'})
     sections = fields.One2Many('sale.sale.section', 'sale', 'Sections')
     previous_sections = fields.Function(fields.One2Many(
         'sale.sale.section', 'sale', 'Previous Sections',
@@ -116,7 +119,8 @@ class Sale(metaclass=PoolMeta):
                 type='invoice')
 
     @fields.depends('template', '_parent_template.sections', 'sections',
-        '_parent_template.clause_template')
+        '_parent_template.clause_template',
+        methods=['on_change_clause_template'])
     def on_change_template(self):
         if self.template and self.template.sections:
             sections = {}
@@ -130,7 +134,13 @@ class Sale(metaclass=PoolMeta):
                     }
             self.sections = sections.values()
         if self.template and self.template.clause_template:
-            self.clauses = self.template.clause_template.content
+            self.clause_template = self.template.clause_template
+            self.on_change_clause_template()
+
+    @fields.depends('clause_template', '_parent_clause_template.content')
+    def on_change_clause_template(self):
+        if self.clause_template:
+            self.clauses = self.clause_template.content
 
     def get_previous_sections(self, name):
         return [s.id for s in self.sections if s.position == 'previous']
@@ -822,24 +832,23 @@ class SendQuotation(Wizard):
             attachments_data=[]):
         if not to_addrs:
             return None
-        print('body', body)
 
-        msg = MIMEMultipart()
+        msg = MIMEMultipart('mixed')
         msg['From'] = from_addr
         msg['Reply-to'] = ', '.join(reply_to)
         msg['To'] = ', '.join(to_addrs)
-        msg['Subject'] = Header(subject, 'utf-8')
+        msg['Subject'] = subject
 
-        msg_body = MIMEBase('text', 'plain')
+        msg_body = MIMEText('text', 'plain')
         msg_body.set_payload(body.encode('UTF-8'), 'UTF-8')
         msg.attach(msg_body)
 
         for attachment_data in attachments_data:
-            attachment = MIMEApplication(
-                attachment_data['content'],
-                Name=attachment_data['filename'], _subtype="pdf")
-            attachment.add_header('content-disposition', 'attachment',
-                filename=('utf-8', '', attachment_data['filename']))
+            attachment = MIMEBase('application', 'octet-stream')
+            attachment.set_payload(attachment_data['content'])
+            encoders.encode_base64(attachment)
+            attachment.add_header('Content-Disposition', 'attachment',
+                filename=attachment_data['filename'])
             msg.attach(attachment)
         return msg
 
