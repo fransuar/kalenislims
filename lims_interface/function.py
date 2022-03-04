@@ -11,6 +11,13 @@ from trytond.transaction import Transaction
 custom_functions = {}
 
 
+def dummy_iter(alias, iteration=None):
+    return alias
+
+
+custom_functions['ITER'] = dummy_iter
+
+
 def to_str(value):
     return value and str(value) or ''
 
